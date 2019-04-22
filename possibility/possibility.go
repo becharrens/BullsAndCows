@@ -176,7 +176,7 @@ func setBitsInEntry(value, entry uint64, numBits, offset uint) uint64 {
 	mask := uint64(1<<numBits - 1)
 	value = (value & mask) << offset
 	mask <<= offset
-	entry = entry & (^mask)
+	entry = entry &^ mask
 	return entry | value
 }
 

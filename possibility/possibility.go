@@ -12,20 +12,27 @@ const maxBitsPerDigit = 64
 
 type Possibility interface {
 	Intersect(other Possibility) (Possibility, error)
+	NumEntries() int
 	NumDigits() uint
 	BitsPerDigit() uint
 	GetEntry(idx uint) uint64
 	SetEntry(idx uint, value uint64) bool
 	GetDigitCandidates(dgt uint) uint64
 	SetDigitCandidates(dgt uint, value uint64) bool
+	GetAbsent() BitMap
+	GetPresent() BitMap
 }
 
 type PossibleNums struct {
 	possibleNums   []uint64
 	valuesPerDigit uint
 	digits         uint
-	presentDigits  Possibility
-	absentDigits   Possibility
+	presentDigits  BitMap
+	absentDigits   BitMap
+}
+
+func (poss *PossibleNums) NumEntries() int {
+	return len(poss.possibleNums)
 }
 
 // Sets an entry in the possibleNums array to the given value
@@ -111,10 +118,17 @@ func (poss *PossibleNums) Intersect(other Possibility) (Possibility, error) {
 		return nil, errors.New("possibilities don't match")
 	}
 
+	if !poss.GetAbsent().And(other.GetPresent()).IsEmpty() ||
+		!poss.GetPresent().And(other.GetAbsent()).IsEmpty() {
+		return nil, nil
+	}
+
 	possibility := &PossibleNums{
 		valuesPerDigit: poss.valuesPerDigit,
 		digits:         poss.digits,
 		possibleNums:   make([]uint64, len(poss.possibleNums)),
+		absentDigits:   poss.GetAbsent().Or(other.GetAbsent()),
+		presentDigits:  poss.GetPresent().Or(other.GetPresent()),
 	}
 
 	for i := 0; i < len(poss.possibleNums); i++ {
@@ -186,6 +200,14 @@ func allZeros(num uint64, numBits uint) bool {
 	return num&uint64(1<<numBits-1) == 0
 }
 
+func (poss *PossibleNums) GetAbsent() BitMap {
+	return poss.absentDigits
+}
+
+func (poss *PossibleNums) GetPresent() BitMap {
+	return poss.presentDigits
+}
+
 // Constructs a possibility with all the fields are set properly and all the
 // digit candidates are initialised to 1s
 func GetPossibility(numDigits uint, valuesPerDigit uint) Possibility {
@@ -195,6 +217,8 @@ func GetPossibility(numDigits uint, valuesPerDigit uint) Possibility {
 
 	possibility := &PossibleNums{
 		valuesPerDigit: valuesPerDigit, digits: numDigits,
+		absentDigits:  GetBitMap(0, numDigits),
+		presentDigits: GetBitMap(0, numDigits),
 	}
 	numBits := numDigits * valuesPerDigit
 	numEntries := numBits / 64

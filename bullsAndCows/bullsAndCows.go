@@ -85,17 +85,26 @@ func candidatesForResultPermutation(
 	// Results passed in should be consistent with the guess
 	poss := possibility.GetPossibility(uint(len(guess)), numValuesPerDigit)
 	var mask, dgtCandidates uint64
+	var bitIdx uint
 	for i, char := range guess {
+		bitIdx = charMapper.MapCharToIdx(char)
 		switch results[char] {
 		case Empty:
 			// Remove char from all entries
-			mask = 1 << charMapper.MapCharToIdx(char)
+			mask = 1 << bitIdx
 			for j := uint(0); j < poss.NumDigits(); j++ {
 				dgtCandidates = poss.GetDigitCandidates(j)
 				poss.SetDigitCandidates(j, dgtCandidates&^mask)
 			}
+			poss.GetAbsent().SetBit(bitIdx)
+		case Cow:
+			dgtCandidates = poss.GetDigitCandidates(uint(i))
+			dgtCandidates &^= 1 << bitIdx
+			poss.SetDigitCandidates(uint(i), dgtCandidates)
+			poss.GetPresent().SetBit(bitIdx)
 		case Bull:
 			poss.SetDigitCandidates(uint(i), 1<<uint(i))
+			poss.GetPresent().SetBit(bitIdx)
 		}
 	}
 	return poss

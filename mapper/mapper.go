@@ -19,3 +19,7 @@ func (mapper *DigitMapper) MapCharToIdx(c rune) uint {
 	// Assumes character is a digit
 	return uint(c - '0')
 }
+
+func GetMapper() CandidateMapper {
+	return &DigitMapper{}
+}

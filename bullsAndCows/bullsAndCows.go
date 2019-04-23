@@ -17,18 +17,30 @@ var (
 	possibleResults = []Result{Bull, Cow, Empty}
 )
 
+func BullsAndCows(guess, goal string) (int, int) {
+	// Assumes both strings are equal in length
+	freqTable := buildFreqTable(goal)
+	bulls := 0
+	cows := 0
+	for i := 0; i < len(goal); i++ {
+		if guess[i] == goal[i] {
+			bulls++
+		} else if freqTable[rune(guess[i])] > 0 {
+			cows++
+		}
+	}
+	return bulls, cows
+}
+
 // Returns the set (map) of all feasible possibilities given the result of the
 // previous guess
-func getCandidatesFromResult(
+func GetCandidatesFromResult(
 	guess string,
 	bulls, cows int,
 	numValuesPerDigit uint,
 	charMapper mapper.CandidateMapper,
 ) map[possibility.Possibility]bool {
-	freqTable := make(map[rune]int)
-	for _, c := range guess {
-		freqTable[c]++
-	}
+	freqTable := buildFreqTable(guess)
 
 	possibilities := make(map[possibility.Possibility]bool)
 	resultPerm := make(map[rune]Result)
@@ -116,4 +128,12 @@ func popFromMap(m map[rune]int) (rune, int) {
 		return k, v
 	}
 	return '0', 0
+}
+
+func buildFreqTable(str string) map[rune]int {
+	freqTable := make(map[rune]int)
+	for _, c := range str {
+		freqTable[c]++
+	}
+	return freqTable
 }

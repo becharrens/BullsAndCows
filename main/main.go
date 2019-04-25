@@ -6,6 +6,7 @@ import (
 	"BullsAndCows/possibility"
 	"fmt"
 	"math/rand"
+	"os"
 )
 
 const (
@@ -21,9 +22,15 @@ func main() {
 	dgtMapper := mapper.GetMapper()
 
 	goal := randomGoal(digits, values, dgtMapper)
+
+	numGuesses := 0
 	var bulls, cows int
 	var guess string
+	var newPoss possibility.Possibility
+	var err error
+	var possibilitiesFromGuess map[possibility.Possibility]bool
 	for {
+		numGuesses++
 		guess = generateGuessFromPossibility(poss, dgtMapper)
 		fmt.Printf(
 			"Guess: %s - bulls: %d, cows: %d\n", guess, bulls, cows,
@@ -32,19 +39,54 @@ func main() {
 		if bulls == digits {
 			break
 		}
-		// TODO: Finish main loop
+
+		possibilitiesFromGuess = bullsAndCows.GetCandidatesFromResult(
+			guess, bulls, cows, values, dgtMapper,
+		)
+
+		newPossibilities := make(map[possibility.Possibility]bool)
+		for currPoss := range possibilities {
+			for guessPoss := range possibilitiesFromGuess {
+				newPoss, err = currPoss.Intersect(guessPoss)
+				if err != nil {
+					fmt.Println(err.Error())
+					os.Exit(1)
+				}
+				if newPoss != nil {
+					newPossibilities[newPoss] = true
+				}
+			}
+		}
+
+		possibilities = newPossibilities
+		poss = peekFromMap(possibilities)
 	}
+	fmt.Printf("Took %d tries to guess the goal: %s", numGuesses, goal)
 }
 
 func generateGuessFromPossibility(
 	poss possibility.Possibility,
 	charMapper mapper.CandidateMapper,
 ) string {
+	// TODO: Implement
 	return ""
 }
 
 func randomGoal(dgts, values int, charMapper mapper.CandidateMapper) string {
-	return ""
+	goal := ""
+	var dgt uint
+	for i := 0; i < dgts; i++ {
+		dgt = uint(rand.Intn(values))
+		goal += string(charMapper.MapIdxToChar(dgt))
+	}
+	return goal
+}
+
+func peekFromMap(m map[possibility.Possibility]bool) possibility.Possibility {
+	for poss := range m {
+		return poss
+	}
+	return nil
 }
 
 func test() {

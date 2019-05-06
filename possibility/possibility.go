@@ -21,6 +21,7 @@ type Possibility interface {
 	SetDigitCandidates(dgt uint, value uint64) bool
 	GetAbsent() BitMap
 	GetPresent() BitMap
+	String() string
 }
 
 type PossibleNums struct {
@@ -141,7 +142,8 @@ func (poss *PossibleNums) Intersect(other Possibility) (Possibility, error) {
 	empty := false
 	for digitsChecked := uint(0); digitsChecked < poss.NumDigits(); digitsChecked++ {
 		empty, entryIdx, offset =
-			poss.areDigitCandidatesEmpty(entryIdx, offset, poss.BitsPerDigit())
+			possibility.areDigitCandidatesEmpty(
+				entryIdx, offset, poss.BitsPerDigit())
 		if empty {
 			return nil, nil
 		}

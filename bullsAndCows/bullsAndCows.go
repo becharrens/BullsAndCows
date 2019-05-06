@@ -39,58 +39,97 @@ func GetCandidatesFromResult(
 	bulls, cows int,
 	numValuesPerDigit uint,
 	charMapper mapper.CandidateMapper,
-) map[possibility.Possibility]bool {
-	freqTable := buildFreqTable(guess)
+) map[string]possibility.Possibility {
+	fstIdxTable := buildFstIdxTable(guess)
 
-	possibilities := make(map[possibility.Possibility]bool)
-	resultPerm := make(map[rune]Result)
+	possibilities := make(map[string]possibility.Possibility)
+	resultPerm := make([]Result, len(guess))
 
 	empty := len(guess) - (bulls + cows)
 	result := []int{bulls, cows, empty}
 
-	findCandidatesFromResult(guess, freqTable, result, numValuesPerDigit,
+	findCandidatesFromResult(0, guess, fstIdxTable, result, numValuesPerDigit,
 		resultPerm, charMapper, possibilities)
 	return possibilities
 }
 
+// func findCandidatesFromResult(
+// 	guess string,
+// 	freqTable map[rune]int,
+// 	result []int,
+// 	numValuesPerDgt uint,
+// 	resultPerm map[rune]Result,
+// 	charMapper mapper.CandidateMapper,
+// 	possibilities map[possibility.Possibility]bool,
+// ) {
+// 	if len(freqTable) == 0 {
+// 		poss := candidatesForResultPermutation(
+// 			guess, resultPerm, numValuesPerDgt, charMapper,
+// 		)
+// 		possibilities[poss] = true
+// 		return
+// 	}
+//
+// 	char, freq := popFromMap(freqTable)
+// 	for i, res := range possibleResults {
+// 		if result[i] >= freq {
+// 			result[i] -= freq
+// 			resultPerm[char] = res
+// 			findCandidatesFromResult(
+// 				guess, freqTable, result, numValuesPerDgt, resultPerm,
+// 				charMapper, possibilities,
+// 			)
+// 			result[i] += freq
+// 		}
+// 	}
+// 	delete(resultPerm, char)
+// 	freqTable[char] = freq
+// }
+
+// Generates and saves all the possible possibilities for the result in the
+// given map
 func findCandidatesFromResult(
+	idx int,
 	guess string,
-	freqTable map[rune]int,
+	fstIdxTable map[rune]int,
 	result []int,
 	numValuesPerDgt uint,
-	resultPerm map[rune]Result,
+	resultPerm []Result,
 	charMapper mapper.CandidateMapper,
-	possibilities map[possibility.Possibility]bool,
+	possibilities map[string]possibility.Possibility,
 ) {
-	if len(freqTable) == 0 {
+	if idx == len(guess) {
 		poss := candidatesForResultPermutation(
 			guess, resultPerm, numValuesPerDgt, charMapper,
 		)
-		possibilities[poss] = true
+		possibilities[poss.String()] = poss
 		return
 	}
-
-	char, freq := popFromMap(freqTable)
+	// TODO: Early exit in case of empty
+	char := rune(guess[idx])
+	charFstIdx := fstIdxTable[char]
 	for i, res := range possibleResults {
-		if result[i] >= freq {
-			result[i] -= freq
-			resultPerm[char] = res
+		if idx > charFstIdx &&
+			(resultPerm[charFstIdx] == Empty) != (res == Empty) {
+			continue
+		}
+		if result[i] >= 1 {
+			result[i]--
+			resultPerm[idx] = res
 			findCandidatesFromResult(
-				guess, freqTable, result, numValuesPerDgt, resultPerm,
-				charMapper, possibilities,
+				idx+1, guess, fstIdxTable, result, numValuesPerDgt,
+				resultPerm, charMapper, possibilities,
 			)
-			result[i] += freq
+			result[i]++
 		}
 	}
-	delete(resultPerm, char)
-	freqTable[char] = freq
 }
 
 // Given an assignment for the result of a guess, calculate the possibility
 // corresponding to it
 func candidatesForResultPermutation(
 	guess string,
-	results map[rune]Result,
+	results []Result,
 	numValuesPerDigit uint,
 	charMapper mapper.CandidateMapper,
 ) possibility.Possibility {
@@ -98,9 +137,9 @@ func candidatesForResultPermutation(
 	poss := possibility.GetPossibility(uint(len(guess)), numValuesPerDigit)
 	var mask, dgtCandidates uint64
 	var bitIdx uint
-	for i, char := range guess {
-		bitIdx = charMapper.MapCharToIdx(char)
-		switch results[char] {
+	for i, res := range results {
+		bitIdx = charMapper.MapCharToIdx(rune(guess[i]))
+		switch res {
 		case Empty:
 			// Remove char from all entries
 			mask = 1 << bitIdx
@@ -115,19 +154,11 @@ func candidatesForResultPermutation(
 			poss.SetDigitCandidates(uint(i), dgtCandidates)
 			poss.GetPresent().SetBit(bitIdx)
 		case Bull:
-			poss.SetDigitCandidates(uint(i), 1<<uint(i))
+			poss.SetDigitCandidates(uint(i), 1<<uint(bitIdx))
 			poss.GetPresent().SetBit(bitIdx)
 		}
 	}
 	return poss
-}
-
-func popFromMap(m map[rune]int) (rune, int) {
-	for k, v := range m {
-		delete(m, k)
-		return k, v
-	}
-	return '0', 0
 }
 
 func buildFreqTable(str string) map[rune]int {
@@ -136,4 +167,14 @@ func buildFreqTable(str string) map[rune]int {
 		freqTable[c]++
 	}
 	return freqTable
+}
+
+func buildFstIdxTable(str string) map[rune]int {
+	table := make(map[rune]int)
+	for i, c := range str {
+		if table[c] == 0 && str[0] != uint8(c) {
+			table[c] = i
+		}
+	}
+	return table
 }

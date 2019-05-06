@@ -31,7 +31,7 @@ func (bm *PossBitMap) Or(other BitMap) BitMap {
 func (bm *PossBitMap) SetBit(bit uint) {
 	if bit < 64 {
 		currValue := bm.Get()
-		currValue &^= 1 << bit
+		currValue |= 1 << bit
 		bm.Set(currValue)
 	}
 }

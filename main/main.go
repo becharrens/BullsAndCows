@@ -32,13 +32,14 @@ func main() {
 	for {
 		numGuesses++
 		guess = generateGuessFromPossibility(poss, dgtMapper)
-		fmt.Printf(
-			"Guess: %s - bulls: %d, cows: %d\n", guess, bulls, cows,
-		)
+
 		bulls, cows = bullsAndCows.BullsAndCows(guess, goal)
 		if bulls == digits {
 			break
 		}
+		fmt.Printf(
+			"Guess: %s - bulls: %d, cows: %d\n", guess, bulls, cows,
+		)
 
 		possibilitiesFromGuess = bullsAndCows.GetCandidatesFromResult(
 			guess, bulls, cows, values, dgtMapper,
@@ -68,7 +69,24 @@ func generateGuessFromPossibility(
 	poss possibility.Possibility,
 	charMapper mapper.CandidateMapper,
 ) string {
-	// TODO: Implement
+	guess := ""
+	var candidates uint64
+	for i := uint(0); i < poss.NumDigits(); i++ {
+		candidates = poss.GetDigitCandidates(i)
+		guess += generateDgtFromDgtCandidates(candidates, charMapper)
+	}
+	return guess
+}
+
+func generateDgtFromDgtCandidates(
+	candidates uint64, charMapper mapper.CandidateMapper,
+) string {
+	for idx := uint(0); candidates > 0; candidates >>= 1 {
+		if candidates&1 > 0 {
+			return string(charMapper.MapIdxToChar(idx))
+		}
+		idx++
+	}
 	return ""
 }
 
